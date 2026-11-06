@@ -11,14 +11,12 @@ Only the seller uses the app. The buyer never logs in.
 ## 2. Goals and non-goals
 
 Goals:
-
 - Record multi-item sales safely. A failed save never leaves a partial sale.
 - Never lose a saved sale.
 - Work on a weak connection (MTN).
 - Ship in one week, with paper as the backup during the trial.
 
 Non-goals for v1:
-
 - Stock tracking, debtors, reports
 - Editing or deleting sales
 - Offline sync or a fully offline app
@@ -27,7 +25,6 @@ Non-goals for v1:
 ## 3. Features, ranked
 
 Must have:
-
 1. Login with name and a 4 digit PIN
 2. Create a multi-item sale, with full rollback on any failure
 3. Sale details page
@@ -42,7 +39,6 @@ Should have:
 10. Today, This week and All filter, with a sales count and total for each day
 
 Cut first, in this order, if behind at the end of day 4:
-
 1. CSV export of sales
 2. Search
 3. Browser draft
@@ -52,7 +48,6 @@ Login, create sale, details, history, receipt PDF and deploy are never cut.
 ## 4. Data model
 
 users
-
 - id
 - name (unique)
 - pin_hash
@@ -61,7 +56,6 @@ users
 - created_at
 
 sales
-
 - id (also the receipt number)
 - client_key (unique, created when a new draft starts, stops duplicate saves)
 - customer_name (optional, shown as Walk-in when empty)
@@ -71,7 +65,6 @@ sales
 - created_at
 
 sale_items
-
 - id
 - sale_id
 - product_name
@@ -117,7 +110,7 @@ Status: proposed. Confirm the approach on day 5.
 ## 8. Decision record
 
 | Area | Decision | Why | Rejected |
-| --- | --- | --- | --- |
+|---|---|---|---|
 | Process | Short upfront design, then thin vertical slices | Requirements are mostly known, and the owner's feedback will change details | Pure waterfall, full agile |
 | Structure | App factory with auth and sales blueprints | Each test gets a fresh app and database | One global app.py |
 | Sessions | Flask session, written by hand | Two or three users, and it teaches the layer under Flask-Login | Flask-Login |
@@ -159,7 +152,7 @@ Status: proposed. Confirm the approach on day 5.
 Checked on 5 November 2026 against the Adikalog Design canvas (11 screens: mobile login, PIN, new sale, receipt, history and details, plus the desktop versions). The owner decided item 1 (PIN) and item 5 (after save) himself and accepted the other proposals, so all 11 resolutions below are decided.
 
 | # | Area | Design shows | Requirement says | Proposed resolution |
-| --- | --- | --- | --- | --- |
+|---|---|---|---|---|
 | 1 | Login | Name, then a 4 digit PIN on a keypad. The name is remembered on the device | Name and password | Decided: name plus a 4 digit PIN, since the family can remember it. The attempt limit protects it, so it is required: 5 wrong tries lock the account for 15 minutes, using users.failed_attempts and users.locked_until. Refuse trivial PINs. Design adds a locked state |
 | 2 | Line price | Price field is per unit. Rows read "2 x 1,200". Details has a Unit price column | selling_price is the amount for the whole line | Label the field "Selling price for all units". Show quantity and the line amount. Drop the Unit price column |
 | 3 | Discount | No discount field and no subtotal anywhere | Discount on every sale | Add a Discount field above Total on New sale. Show Subtotal, Discount and Total on details and receipt |
@@ -175,14 +168,13 @@ Checked on 5 November 2026 against the Adikalog Design canvas (11 screens: mobil
 What already matches: customer is optional and shows as Walk-in, whole naira with the naira sign, items list with remove before saving, one Grand total, details with product and quantity counts, history search and a New sale button, the desktop split layout, and a receipt with shop name, date, customer, items and total.
 
 Design tokens to put in the Tailwind config:
-
 - ground #f2efe9, ink #1a1a18, accent #b93d0e, slate #4a5d6b
 - card border #d8d2c6, input border #918a7b, divider #e6e0d4, muted text #6b6660, white #ffffff
 - fonts: Space Grotesk 400, 500, 700 and DM Mono 400, 500
 
 ## 12. Folder structure (app factory)
 
-```text
+```
 adikalog/
   app/
     __init__.py          create_app(config_name) builds and returns the app
@@ -228,15 +220,15 @@ adikalog/
   tailwind.config.js     design tokens from section 11
   src/input.css          Tailwind entry file
   wsgi.py                gunicorn entry point
-  requirements.txt       pinned runtime libraries
-  requirements-dev.txt   pytest and ruff
+  pyproject.toml         runtime dependencies, plus a dev group with pytest and ruff
+  uv.lock                exact pinned versions, committed to the repo
+  pytest.ini             pytest settings: pythonpath and test folder
   .env.example           names of env vars, no values
   .gitignore
   README.md
 ```
 
 Why this shape:
-
 - One blueprint per area (auth, sales). Each has routes.py for HTTP and, for sales, service.py for the logic, so tests call create_sale directly without a request.
 - No repository classes, no extra layers. The first version of the inventory app was over-engineered, and this one stays small.
 - extensions.py holds the objects without an app, which avoids circular imports and lets each test build its own app.
@@ -244,7 +236,7 @@ Why this shape:
 ## 13. Stack and libraries
 
 | Layer | Choice | Notes |
-| --- | --- | --- |
+|---|---|---|
 | Language | Python (the version in your WSL, 3.11 or newer) | Pin it on the host |
 | Web framework | Flask with an app factory | Blueprints for auth and sales |
 | Database | PostgreSQL | Local in WSL for development |
@@ -260,6 +252,7 @@ Why this shape:
 | Styling | Tailwind CSS, standalone CLI | Output file committed, so the host needs no build step |
 | Front end code | Plain JavaScript | Draft list, localStorage, Web Share API with download fallback |
 | Production server | gunicorn | Start command on the host |
+| Packages | uv in project mode | uv add for runtime libraries, uv add --dev for pytest and ruff, uv run to run commands. Check how Render installs from uv.lock on day 6 |
 | Env files | python-dotenv | Local development only |
 | Tests | pytest with the Flask test client | Postgres test database |
 | Lint and format | ruff | Already in your editor setup |
@@ -270,7 +263,7 @@ Left out on purpose: Flask-Login, WTForms, Docker for v1, Redis, Celery, any Jav
 ## 14. Hosting and environments
 
 | Environment | Where | Notes |
-| --- | --- | --- |
+|---|---|---|
 | Development | WSL, local Postgres, adikalog_dev database | flask run |
 | Testing | WSL, local Postgres, adikalog_test database | Built from migrations on each run |
 | CI | GitHub Actions with a Postgres service container | Runs on every push |
@@ -280,7 +273,6 @@ Left out on purpose: Flask-Login, WTForms, Docker for v1, Redis, Celery, any Jav
 Environment variables: SECRET_KEY, DATABASE_URL, APP_ENV. Nothing secret is committed. .env.example lists the names only.
 
 Deploy details to settle on day 6:
-
 - Start command: run migrations, then gunicorn, for example flask db upgrade followed by gunicorn wsgi:app. Render may restrict pre-deploy commands to paid plans, so check before relying on one.
 - Backups: nightly pg_dump through backup.yml, stored away from the host. The storage target is an open item in section 10.
 - Account creation: run the CLI once with the production DATABASE_URL set only for that command.
