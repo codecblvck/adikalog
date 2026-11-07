@@ -36,3 +36,10 @@ def record_wrong_pin(user):
             .values(locked_until=SET_TIME + datetime.now(UTC))
         )
     db.session.commit()
+
+
+def reset_attempts(user):
+    user.failed_attempts = 0
+    user.locked_until = None
+    db.session.commit() 
+
