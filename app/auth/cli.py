@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from app.auth import auth_bp
 from app.auth.service import get_user_by_name
 from app.auth.validators import validate_name, validate_pin
+from app.auth.service import reset_attempts
 from app.extensions import db
 from app.models import User
 
@@ -52,7 +53,5 @@ def reset_pin():
         raise click.ClickException(str(error))
 
     user.pin = pin
-    user.failed_attempts = 0
-    user.locked_until = None
-    db.session.commit()
+    reset_attempts(user)
     click.echo(f"PIN reset for {user.name}")
