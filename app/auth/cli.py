@@ -35,4 +35,24 @@ def create_user():
         raise click.ClickException(f"User '{name}' already exists.")
 
     click.echo(f"Created user {name}")
-    
+
+
+@auth_bp.cli.command("reset-pin")
+def reset_pin():
+    """Set a new PIN for an existing user and clear any lock."""
+    name = click.prompt("Name")
+    user = get_user_by_name(name)
+    if user is None:
+        raise click.ClickException("No such user.")
+
+    pin = click.prompt("New PIN", hide_input=True, confirmation_prompt=True)
+    try:
+        validate_pin(pin)
+    except ValueError as error:
+        raise click.ClickException(str(error))
+
+    user.pin = pin
+    user.failed_attempts = 0
+    user.locked_until = None
+    db.session.commit()
+    click.echo(f"PIN reset for {user.name}")
