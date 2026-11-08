@@ -2,8 +2,9 @@ import os
 
 from flask import Flask
 
-from app.extensions import db, migrate
 from config import configs
+from app.extensions import db, migrate
+from app.blueprints_reg import register_bluprints
 
 
 def create_app(config_name=None):
@@ -17,6 +18,7 @@ def create_app(config_name=None):
 
     from app import models as models
 
+    register_bluprints(app)
 
     @app.get("/health")
     def health():
